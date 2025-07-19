@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum WorkSchedule {
+  FOUR_DAYS    // 4 jours par semaine
+  FIVE_DAYS    // 5 jours par semaine
+}
+
+enum LeaveType {
+  RTT
+  LEGAL_VACATION    // 5 semaines légales
+  SENIORITY        // Jours d'ancienneté
+  EXCEPTIONAL      // Congés exceptionnels
+  SICK_LEAVE
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                String        @id @default(cuid())
+  email             String        @unique
+  firstName         String
+  lastName          String
+  password          String
+  role              Role          @default(EMPLOYEE)
+  
+  // Paramètres de travail
+  workSchedule      WorkSchedule  @default(FIVE_DAYS)
+  dailyHours        Float         @default(8.0)  // Heures par jour
+  startDate         DateTime      // Date d'embauche
+  
+  // Paramètres congés
+  rttDaysPerYear    Int           @default(0)
+  seniorityDays     Int           @default(0)
+  
+  // Relations
+  timeEntries       TimeEntry[]
+  scheduleEntries   ScheduleEntry[]
+  leaveRequests     LeaveRequest[]
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("users")
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date        DateTime  @db.Date
+  startTime   DateTime?
+  endTime     DateTime?
+  breakTime   Int       @default(0)  // Minutes de pause
+  workTime    Float?    // Heures travaillées calculées
+  
+  notes       String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@unique([userId, date])
+  @@map("time_entries")
+}
+
+model ScheduleEntry {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date        DateTime  @db.Date
+  startTime   String    // Format HH:MM
+  endTime     String    // Format HH:MM
+  isPhoneShift Boolean  @default(false)  // Créneau téléphonique
+  
+  notes       String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@unique([userId, date])
+  @@map("schedule_entries")
+}
+
+model LeaveRequest {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  startDate   DateTime      @db.Date
+  endDate     DateTime      @db.Date
+  type        LeaveType
+  status      RequestStatus @default(PENDING)
+  
+  daysCount   Float         // Nombre de jours (peut être 0.5 pour demi-journée)
+  reason      String?
+  
+  // Champs admin
+  reviewedBy  String?       // ID de l'admin qui a traité
+  reviewedAt  DateTime?
+  comments    String?       // Commentaires admin
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  @@map("leave_requests")
+}
+
+model HolidayCalendar {
+  id          String    @id @default(cuid())
+  date        DateTime  @db.Date @unique
+  name        String    // Nom du jour férié
+  isWorking   Boolean   @default(false)  // Si c'est un jour travaillé malgré tout
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("holiday_calendar")
+}

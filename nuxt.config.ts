@@ -10,5 +10,11 @@ export default defineNuxtConfig({
       tailwindcss(),
     ],
   },
-  modules: ['@nuxt/fonts', '@nuxt/icon'],
+  modules: ['@nuxt/fonts', '@nuxt/icon', '@pinia/nuxt', '@vueuse/nuxt'],
+  runtimeConfig: {
+    jwtSecret: process.env.JWT_SECRET || 'default-secret-key',
+    public: {
+      appName: 'Team Management App'
+    }
+  }
 })
