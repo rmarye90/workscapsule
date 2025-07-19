@@ -52,6 +52,8 @@ model User {
   timeEntries       TimeEntry[]
   scheduleEntries   ScheduleEntry[]
   leaveRequests     LeaveRequest[]
+  phoneSlots        PhoneSlot[]
+  phoneReminders    PhoneReminder[]
   
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -96,6 +98,40 @@ model ScheduleEntry {
   
   @@unique([userId, date])
   @@map("schedule_entries")
+}
+
+model PhoneSlot {
+  id            String    @id @default(cuid())
+  date          DateTime  @db.Date
+  startTime     String    // Format HH:MM
+  endTime       String    // Format HH:MM
+  assignedUserId String?
+  assignedUser  User?     @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+  
+  isRecurring   Boolean   @default(false)  // Créneau récurrent
+  dayOfWeek     Int?      // 1-7 pour lundi-dimanche si récurrent
+  description   String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("phone_slots")
+}
+
+model PhoneReminder {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phoneSlotId String
+  
+  reminderTime DateTime  // Quand envoyer le rappel
+  message     String    // Message du rappel
+  sent        Boolean   @default(false)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("phone_reminders")
 }
 
 model LeaveRequest {
